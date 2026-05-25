@@ -1,0 +1,23 @@
+from pyspark import pipelines as dp
+
+BASE_DIR = "/Volumes/marathos/default/raw"
+
+schema = (
+    spark.read.format("csv")
+    .options(header=True, inferSchema=True)
+    .load(f"{BASE_DIR}/TWO_CENTURIES_OF_UM_RACES.csv")
+    .schema
+)
+
+# STREAMING TABLE
+@dp.table(name="marathos.bronze.raw_marathos", 
+          comment="Raw data for the Marathos",
+          table_properties={
+              "delta.columnMapping.mode": "name",
+              "delta.minReaderVersion": "2",
+              "delta.minWriterVersion": "5"
+          })
+def raw_marathos():
+    return spark.readStream.format("csv").options(header=True, encoding="latin1").schema(schema).load(f"{BASE_DIR}")
+
+
