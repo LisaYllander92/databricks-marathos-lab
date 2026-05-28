@@ -75,3 +75,5 @@ def clean_marathos():
 
     # Todo: add unknown on missing values
     # Add column explination for country 
+    # släng orimliga tider / ålder
+    # konvertera data typ för performance
