@@ -9,9 +9,11 @@ from pyspark.sql.functions import (
     concat,
     xxhash64,
     abs,
-    coalesce
+    coalesce,
+    year,
+    expr,
 )
-from utils.utils import rename_column_to_snake_case
+from utils.utils import rename_column_to_snake_case, drop_null_rows, fill_unknown
 
 
 @dp.table(
@@ -108,10 +110,12 @@ def clean_marathos():
 .withColumn(
     "Athlete average speed",
     coalesce(col("Athlete average speed"), lit(0.0))
+).filter(
+    (year(col("event_start_date")) - col("Athlete year of birth") >= 18) &
+    (year(col("event_start_date")) - col("Athlete year of birth") <= 100)
+)
+.withColumn(
+    "Athlete age category",
+    regexp_replace(col("Athlete age category"), "^F", "W")  
 )
     )
-
-    # Todo: add unknown on missing values
-    # Add column explination for country 
-    # släng orimliga tider / ålder
-    # konvertera data typ för performance
