@@ -9,6 +9,7 @@ from pyspark.sql.functions import (
     concat,
     xxhash64,
     abs,
+    coalesce
 )
 from utils.utils import rename_column_to_snake_case
 
@@ -26,6 +27,20 @@ def clean_marathos():
     df = spark.sql("FROM marathos.bronze.raw_marathos")
     df = rename_column_to_snake_case(df)
 
+    df = fill_unknown(df, [
+    "athlete_club",
+    "athlete_country",
+    ])
+    
+    df = drop_null_rows(df, [
+        "athlete_performance",
+        "event_start_date",
+        "athlete_id",
+        "athlete_gender",
+        "athlete_age_category",
+        "event_distance/length",
+    ])
+
     return (
         df.withColumn(
             "is_valid",
@@ -42,23 +57,14 @@ def clean_marathos():
         )
         .filter(col("is_valid") == True)
         .withColumn(
-            "event_start_date",
-            to_date(
-                concat(
-                    regexp_extract(col("event_dates"), r"^(\d{2})", 1),
-                    lit("."),
-                    regexp_extract(col("event_dates"), r"(\d{2}\.\d{4})", 1),
-                ),
-                "dd.MM.yyyy",
-            ),
-        )
-        .withColumn(
-            "event_end_date",
-            to_date(
-                regexp_extract(col("event_dates"), r"(\d{2}\.\d{2}\.\d{4})$", 1),
-                "dd.MM.yyyy",
-            ),
-        )
+    "event_start_date",
+    expr("try_to_date(concat(regexp_extract(`Event dates`, '^(\\\\d{2})', 1), '.', regexp_extract(`Event dates`, '(\\\\d{2}\\\\.\\\\d{4})', 1)), 'dd.MM.yyyy')")
+)
+.withColumn(
+    "event_end_date",
+    expr("try_to_date(regexp_extract(`Event dates`, '(\\\\d{2}\\\\.\\\\d{2}\\\\.\\\\d{4})$', 1), 'dd.MM.yyyy')")
+)
+.filter(col("event_start_date").isNotNull())
         .withColumn(
             "athlete_average_speed",
             when(
@@ -70,7 +76,39 @@ def clean_marathos():
             "athlete_year_of_birth", col("athlete_year_of_birth").cast("integer")
         )
         .withColumn("event_id", abs(xxhash64(col("event_name"))))
-        .withColumn("result_id", abs(xxhash64(col("event_name"), col("athlete_id"))))
+        .withColumn("result_id", abs(xxhash64(col("event_name"), col("athlete_id")))
+        )
+        .withColumn(
+    "performance_seconds",
+    when(
+        col("Athlete performance").rlike(r"\d+:\d+:\d+"),
+        regexp_extract(col("Athlete performance"), r"(\d+):(\d+):(\d+)", 1).cast("int") * 3600 +
+        regexp_extract(col("Athlete performance"), r"(\d+):(\d+):(\d+)", 2).cast("int") * 60 +
+        regexp_extract(col("Athlete performance"), r"(\d+):(\d+):(\d+)", 3).cast("int")
+    ).otherwise(None)
+)
+        .withColumn(
+            "Athlete club",
+            coalesce(col("Athlete club").cast("string"), lit("Unknown")
+                     )).withColumn(
+            "Athlete country",
+            coalesce(col("Athlete country").cast("string"), lit("Unknown")
+                     )
+        ).withColumn(
+    "Athlete average speed",
+    expr("try_cast(`Athlete average speed` as double)")
+)
+.filter(
+    col("Athlete average speed").isNull() |
+    (
+        (col("Athlete average speed") <= 20.8) &
+        (col("Athlete average speed") >= 2.0)
+    )
+)
+.withColumn(
+    "Athlete average speed",
+    coalesce(col("Athlete average speed"), lit(0.0))
+)
     )
 
     # Todo: add unknown on missing values
