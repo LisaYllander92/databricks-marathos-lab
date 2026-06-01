@@ -27,12 +27,13 @@ from utils.utils import rename_column_to_snake_case, drop_null_rows, fill_unknow
 )
 def clean_marathos():
     # Read and union both race datasets before cleaning
-    df_main = rename_column_to_snake_case(spark.sql("FROM marathos.bronze.raw_marathos"))
-    df_stockholm = rename_column_to_snake_case(spark.sql("FROM marathos.bronze.stockholm_trail_classic_2024"))
+    df_main = rename_column_to_snake_case(
+        spark.sql("FROM marathos.bronze.raw_marathos")
+    )
+    df_stockholm = rename_column_to_snake_case(
+        spark.sql("FROM marathos.bronze.stockholm_trail_classic_2024")
+    )
     df = df_main.unionByName(df_stockholm, allowMissingColumns=True)
-
-    # Rename all columns to snake_case
-    df = rename_column_to_snake_case(df)
 
     # Replace nulls with "Unknown" for non-critical string columns
     df = fill_unknown(df, ["athlete_club", "athlete_country"])
@@ -57,6 +58,14 @@ def clean_marathos():
             .otherwise(False),
         )
         .filter(col("is_valid") == True)
+        .drop("is_valid")  # Remove column
+        # --- Parse event type (distance/time) ---
+        .withColumn(
+            "event_type",
+            when(col("event_distance/length").rlike("km|mi|mile"), lit("distance"))
+            .when(col("event_distance/length").rlike("h"), lit("time"))
+            .otherwise(None),
+        )
         # --- Parse event dates ---
         # Extract start date from formats like "21.-22.04.2018" or "17.06.2018"
         # try_to_date returns null for invalid dates (e.g. 31.04.2018) instead of crashing
@@ -94,9 +103,17 @@ def clean_marathos():
             "performance_seconds",
             when(
                 col("athlete_performance").rlike(r"\d+:\d+:\d+"),
-                regexp_extract(col("athlete_performance"), r"(\d+):(\d+):(\d+)", 1).cast("int") * 3600
-                + regexp_extract(col("athlete_performance"), r"(\d+):(\d+):(\d+)", 2).cast("int") * 60
-                + regexp_extract(col("athlete_performance"), r"(\d+):(\d+):(\d+)", 3).cast("int"),
+                regexp_extract(
+                    col("athlete_performance"), r"(\d+):(\d+):(\d+)", 1
+                ).cast("int")
+                * 3600
+                + regexp_extract(
+                    col("athlete_performance"), r"(\d+):(\d+):(\d+)", 2
+                ).cast("int")
+                * 60
+                + regexp_extract(
+                    col("athlete_performance"), r"(\d+):(\d+):(\d+)", 3
+                ).cast("int"),
             ).otherwise(None),
         )
         # --- Cast average speed to double, handle malformed values (e.g. "18:00:00") ---
