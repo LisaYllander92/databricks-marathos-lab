@@ -154,6 +154,12 @@ def clean_marathos():
         # result_id: unique per athlete + event combination
         .withColumn("event_id", abs(xxhash64(col("event_name"))))
         .withColumn("result_id", abs(xxhash64(col("event_name"), col("athlete_id"))))
+        # --- Clean up club names ---
+        # Remove leading asterisk
+        .withColumn(
+            "athlete_club",
+            regexp_replace(col("athlete_club"), r"^\*", "")
+)
     )
 
     # Load country codes and join - inner join drops rows with invalid or missing country codes
