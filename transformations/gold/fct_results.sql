@@ -4,7 +4,8 @@ SELECT
     result_id,
     event_id,
     athlete_id,
-    performance_seconds AS performance,
+    performance_seconds,
+    performance_km,
     athlete_average_speed AS average_speed
 FROM
   STREAM marathos.silver.marathos_obt;

@@ -116,6 +116,24 @@ def clean_marathos():
                 ).cast("int"),
             ).otherwise(None),
         )
+        .filter(
+            (col("performance_seconds") > 3600)  # atleast 1 hour
+            | col("athlete_performance").rlike(r"\d+\.?\d*\s*km")
+        )
+        # --- Convert performance string to total km ---
+        .withColumn(
+            "performance_km",
+            when(
+                col("athlete_performance").rlike(r"\d+\.?\d*\s*km"),
+                regexp_extract(col("athlete_performance"), r"(\d+\.?\d*)", 1).cast(
+                    "double"
+                ),
+            ).otherwise(None),
+        )
+        .filter(
+            (col("performance_seconds") > 3600) |
+            (col("performance_km") > 0)  # km must be bigger than 0
+        )
         # --- Cast average speed to double, handle malformed values (e.g. "18:00:00") ---
         .withColumn(
             "athlete_average_speed",
@@ -156,10 +174,7 @@ def clean_marathos():
         .withColumn("result_id", abs(xxhash64(col("event_name"), col("athlete_id"))))
         # --- Clean up club names ---
         # Remove leading asterisk
-        .withColumn(
-            "athlete_club",
-            regexp_replace(col("athlete_club"), r"^\*", "")
-)
+        .withColumn("athlete_club", regexp_replace(col("athlete_club"), r"^\*", ""))
     )
 
     # Load country codes and join - inner join drops rows with invalid or missing country codes
