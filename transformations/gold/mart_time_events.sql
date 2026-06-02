@@ -1,4 +1,7 @@
-CREATE OR REFRESH MATERIALIZED VIEW marathos.gold.mart_time_events
+USE CATALOG marathos;
+USE SCHEMA gold;
+
+CREATE OR REFRESH MATERIALIZED VIEW mart_time_events
   COMMENT "Mart for time events with athlete and country" AS
 SELECT
   f.result_id,
@@ -14,10 +17,10 @@ SELECT
   a.country_name,
   a.birth_year
 FROM
-  marathos.gold.fct_results f
-    LEFT JOIN marathos.gold.dim_event e
+  fct_results f
+    LEFT JOIN dim_event e
       ON f.event_id = e.event_id
-    LEFT JOIN marathos.gold.dim_athlete a
+    LEFT JOIN dim_athlete a
       ON f.athlete_id = a.athlete_id
 WHERE
   e.event_type = 'time';
