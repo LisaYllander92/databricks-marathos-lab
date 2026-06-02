@@ -6,6 +6,7 @@ CREATE OR REFRESH MATERIALIZED VIEW mart_distance_events
 SELECT
   f.result_id,
   f.performance_seconds,
+  f.performance_seconds / 3600.0 AS performance_hours,
   f.average_speed,
   e.event_name,
   e.distance,
