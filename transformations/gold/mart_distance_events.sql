@@ -11,6 +11,7 @@ SELECT
   e.distance,
   e.start_date,
   e.end_date,
+  e.event_year,
   e.number_finishers,
   a.athlete_id,
   a.gender,
