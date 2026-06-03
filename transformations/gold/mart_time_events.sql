@@ -1,4 +1,5 @@
 USE CATALOG marathos;
+
 USE SCHEMA gold;
 
 CREATE OR REFRESH MATERIALIZED VIEW mart_time_events
@@ -19,9 +20,19 @@ SELECT
   a.birth_year
 FROM
   fct_results f
-    LEFT JOIN dim_event e
+    JOIN dim_event e
       ON f.event_id = e.event_id
-    LEFT JOIN dim_athlete a
+    JOIN dim_athlete a
       ON f.athlete_id = a.athlete_id
 WHERE
-  e.event_type = 'time';
+  e.event_type = 'time'
+  AND a.country_name IN (
+    SELECT
+      country_name
+    FROM
+      marathos.gold.dim_athlete
+    GROUP BY
+      country_name
+    HAVING
+      COUNT(*) >= 100
+  );
