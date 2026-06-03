@@ -104,7 +104,7 @@ The dashboard is built in Databricks and consists of three tabs:
 - **Distance Marathon Analytics** — performance by country and age category for distance events
 - **Time Marathon Analytics** — distance covered by country and age category for time events
 
-> Link to dashboard: [Marathos Dashboard](https://dbc-193836be-420a.cloud.databricks.com/dashboardsv3/01f15e554b2d192c8e83c3d6c1742bd1/published?o=7474648376001200&f_0c27815f%7Eyear=2000&f_0c27815f%7Ecountry=Angola)
+> Link to dashboard: [Marathos Dashboard](https://dbc-193836be-420a.cloud.databricks.com/dashboardsv3/01f15e554b2d192c8e83c3d6c1742bd1/published?o=7474648376001200)
 
 ---
 
@@ -114,7 +114,7 @@ A Databricks Genie space has been created for Marathos, allowing business stakeh
 
 Genie answers have been verified manually in `explorations/verify_genie.ipynb`.
 
-> Link to Genie space: *[add link]*
+> Link to Genie space: [Marathos Genie Chat](https://dbc-193836be-420a.cloud.databricks.com/genie/rooms/01f15f5acc5a1b6b83ca492267f98b93?o=7474648376001200)
 
 ---
 
