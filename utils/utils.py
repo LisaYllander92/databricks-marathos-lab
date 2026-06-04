@@ -16,6 +16,7 @@ from pyspark.sql.functions import (
 # General helpers
 # ---------------------------------------------------------------------------
 
+
 def to_snake_case(name):
     """Converts a column name to snake_case."""
     return re.sub(r"[\s]+", "_", name.strip().casefold())
@@ -44,6 +45,7 @@ def fill_unknown(df, columns):
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
+
 
 def validate_performance_units(df):
     """
@@ -76,6 +78,7 @@ def validate_performance_units(df):
 # Parsing
 # ---------------------------------------------------------------------------
 
+
 def parse_event_type(df):
     """
     Derives event_type from event_distance/length:
@@ -89,7 +92,7 @@ def parse_event_type(df):
         .otherwise(None),
     )
 
-
+# Help from LLM - notis that my generated dataset had wrong date so it way fiilterd out
 def parse_event_dates(df):
     """
     Parses event_dates string into event_start_date and event_end_date.
@@ -100,15 +103,26 @@ def parse_event_dates(df):
     return (
         df.withColumn(
             "event_start_date",
-            expr(
-                "try_to_date(concat(regexp_extract(event_dates, '^(\\\\d{2})', 1), '.', "
-                "regexp_extract(event_dates, '(\\\\d{2}\\\\.\\\\d{4})', 1)), 'dd.MM.yyyy')"
+            coalesce(
+                # Format 1: europeiskt format "21.-22.04.2018" eller "17.06.2018"
+                expr(
+                    "try_to_date(concat(regexp_extract(event_dates, '^(\\\\d{2})', 1), '.', "
+                    "regexp_extract(event_dates, '(\\\\d{2}\\\\.\\\\d{4})', 1)), 'dd.MM.yyyy')"
+                ),
+                # Format 2: ISO-format "2024-06-15"
+                expr("try_to_date(event_dates, 'yyyy-MM-dd')"),
+                # Format 3: redan ett datum (från Stockholm-datan)
+                col("event_start_date"),
             ),
         )
         .withColumn(
             "event_end_date",
-            expr(
-                "try_to_date(regexp_extract(event_dates, '(\\\\d{2}\\\\.\\\\d{2}\\\\.\\\\d{4})$', 1), 'dd.MM.yyyy')"
+            coalesce(
+                expr(
+                    "try_to_date(regexp_extract(event_dates, '(\\\\d{2}\\\\.\\\\d{2}\\\\.\\\\d{4})$', 1), 'dd.MM.yyyy')"
+                ),
+                expr("try_to_date(event_dates, 'yyyy-MM-dd')"),
+                col("event_end_date"),
             ),
         )
         .filter(col("event_start_date").isNotNull())
@@ -127,9 +141,17 @@ def parse_performance(df):
             "performance_seconds",
             when(
                 col("athlete_performance").rlike(r"\d+:\d+:\d+"),
-                regexp_extract(col("athlete_performance"), r"(\d+):(\d+):(\d+)", 1).cast("int") * 3600
-                + regexp_extract(col("athlete_performance"), r"(\d+):(\d+):(\d+)", 2).cast("int") * 60
-                + regexp_extract(col("athlete_performance"), r"(\d+):(\d+):(\d+)", 3).cast("int"),
+                regexp_extract(
+                    col("athlete_performance"), r"(\d+):(\d+):(\d+)", 1
+                ).cast("int")
+                * 3600
+                + regexp_extract(
+                    col("athlete_performance"), r"(\d+):(\d+):(\d+)", 2
+                ).cast("int")
+                * 60
+                + regexp_extract(
+                    col("athlete_performance"), r"(\d+):(\d+):(\d+)", 3
+                ).cast("int"),
             ).otherwise(None),
         )
         .filter(
@@ -140,19 +162,19 @@ def parse_performance(df):
             "performance_km",
             when(
                 col("athlete_performance").rlike(r"\d+\.?\d*\s*km"),
-                regexp_extract(col("athlete_performance"), r"(\d+\.?\d*)", 1).cast("double"),
+                regexp_extract(col("athlete_performance"), r"(\d+\.?\d*)", 1).cast(
+                    "double"
+                ),
             ).otherwise(None),
         )
-        .filter(
-            (col("performance_seconds") > 3600)
-            | (col("performance_km") > 0)
-        )
+        .filter((col("performance_seconds") > 3600) | (col("performance_km") > 0))
     )
 
 
 # ---------------------------------------------------------------------------
 # Filtering
 # ---------------------------------------------------------------------------
+
 
 def filter_realistic_performance(df):
     """
@@ -166,12 +188,9 @@ def filter_realistic_performance(df):
             "is_realistic_performance",
             when(
                 col("event_type") == "distance",
-                col("performance_seconds").between(3600, 216000)
+                col("performance_seconds").between(3600, 216000),
             )
-            .when(
-                col("event_type") == "time",
-                col("performance_km").between(1, 500)
-            )
+            .when(col("event_type") == "time", col("performance_km").between(1, 500))
             .otherwise(False),
         )
         .filter(col("is_realistic_performance") == True)
@@ -209,21 +228,19 @@ def filter_athlete_age(df):
     Removes athletes who were younger than 18 or older than 100
     at the time of the event, based on year of birth and event start date.
     """
-    return (
-        df.withColumn(
-            "athlete_year_of_birth",
-            col("athlete_year_of_birth").cast("integer"),
-        )
-        .filter(
-            (year(col("event_start_date")) - col("athlete_year_of_birth") >= 18)
-            & (year(col("event_start_date")) - col("athlete_year_of_birth") <= 100)
-        )
+    return df.withColumn(
+        "athlete_year_of_birth",
+        col("athlete_year_of_birth").cast("integer"),
+    ).filter(
+        (year(col("event_start_date")) - col("athlete_year_of_birth") >= 18)
+        & (year(col("event_start_date")) - col("athlete_year_of_birth") <= 100)
     )
 
 
 # ---------------------------------------------------------------------------
 # Enrichment
 # ---------------------------------------------------------------------------
+
 
 def normalize_age_category(df):
     """
@@ -243,9 +260,8 @@ def generate_ids(df):
     - result_id: unique per athlete + event combination
     abs() ensures positive values.
     """
-    return (
-        df.withColumn("event_id", abs(xxhash64(col("event_name"))))
-        .withColumn("result_id", abs(xxhash64(col("event_name"), col("athlete_id"))))
+    return df.withColumn("event_id", abs(xxhash64(col("event_name")))).withColumn(
+        "result_id", abs(xxhash64(col("event_name"), col("athlete_id")))
     )
 
 
