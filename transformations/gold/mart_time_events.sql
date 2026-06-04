@@ -8,6 +8,7 @@ SELECT
   f.result_id,
   f.performance_km,
   f.average_speed,
+  f.age_category,
   e.event_name,
   e.distance,
   e.start_date,
@@ -15,7 +16,6 @@ SELECT
   e.number_finishers,
   a.athlete_id,
   a.gender,
-  a.age_category,
   a.country_name,
   a.birth_year
 FROM
