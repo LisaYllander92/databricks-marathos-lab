@@ -1,4 +1,5 @@
 from pyspark import pipelines as dp
+from pyspark.sql.functions import col
 from utils.utils import (
     rename_column_to_snake_case,
     drop_null_rows,
@@ -62,11 +63,13 @@ def clean_marathos():
                     "athlete_gender",
                     "athlete_age_category",
                     "event_distance/length",
-                    "performance_seconds",
                     "event_start_date",
                     "athlete_year_of_birth",
                 ],
             )
+        )
+        .filter(
+            col("performance_seconds").isNotNull() | col("performance_km").isNotNull()
         )
         # Remove athletes outside valid age range (18–100) at time of event
         .transform(filter_athlete_age)

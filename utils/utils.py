@@ -166,11 +166,11 @@ def filter_realistic_performance(df):
             "is_realistic_performance",
             when(
                 col("event_type") == "distance",
-                col("performance_seconds").between(3600, 216000),
+                col("performance_seconds").between(3600, 216000)
             )
             .when(
                 col("event_type") == "time",
-                col("performance_km").between(1, 500),
+                col("performance_km").between(1, 500)
             )
             .otherwise(False),
         )
