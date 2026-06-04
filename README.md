@@ -4,6 +4,13 @@ A school project in Big Data & Cloud coure built for **Marathos**, a global comp
 
 ---
 
+## Video presentation
+*Follow link below to youtube to watch presentationvideo*
+
+[![Klicka här för att se presentationen](https://github.com/LisaYllander92/databricks-marathos-lab/blob/main/marathos_logo.png?raw=true)](https://youtu.be/OIPmX9rVIHo)
+
+---
+
 ## Tech Stack
 
 - **Databricks** — data platform and pipeline orchestration
@@ -58,9 +65,9 @@ A cleaned **One Big Table (OBT)** — `marathos_obt` — produced by unioning th
 A dimensional model built on top of silver:
 
 ```
-fct_results         → result_id, event_id, athlete_id, performance_seconds, performance_km, average_speed
-dim_event           → event_id, event_name, event_type, event_year, start_date, end_date, event_distance, number_finishers
-dim_athlete         → athlete_id, gender, age_category, birth_year, club, country_name, athlete_country
+fct_results         → result_id, event_id, athlete_id, performance_seconds, performance_km, average_speed, club, age_category
+dim_event           → event_id, event_name, event_type, event_year, start_date, end_date, distance, number_finishers
+dim_athlete         → athlete_id, gender, birth_year, country_name, country_code
 dim_date            → date, year, month, month_name, quarter, day, day_of_week, day_name
 ```
 
@@ -93,6 +100,8 @@ dim_date            → date, year, month, month_name, quarter, day, day_of_week
 | Mixed age category prefixes (F/W) | Silver | Normalized to W prefix |
 | Age categories with small sample sizes (e.g. M95, W95) | Gold | Noted in dashboard |
 | Countries with few results (< 100) | Gold | Filtered out in distance and time marts |
+| Duplicated athletes due to mid-life changes (club/age class) | Gold | Moved `club` and `age_category` to `fct_results`. Structured dimension with `GROUP BY` and `MIN()` to guarantee 1 row per athlete. |
+| Duplicated events across multiple years | Gold | Structured `dim_event` with `GROUP BY event_id` and `MAX(number_finishers)` to handle historical event changes. |
 
 ---
 
@@ -114,7 +123,7 @@ A Databricks Genie space has been created for Marathos, allowing business stakeh
 
 Genie answers have been verified manually in `explorations/verify_genie.ipynb`.
 
-> Link to Genie space: [Marathos Genie Chat](https://dbc-193836be-420a.cloud.databricks.com/genie/rooms/01f15f5acc5a1b6b83ca492267f98b93?o=7474648376001200)
+> Link to Genie space: [Marathos Genie Chat](https://dbc-193836be-420a.cloud.databricks.com/genie/rooms/01f16016b96e16839396d9a05d32fea3?o=7474648376001200)
 
 ---
 
@@ -139,11 +148,15 @@ The pipeline is scheduled to run automatically. *(Update with schedule details a
 LLM was used for the following tasks:
 - Generating the Stockholm Trail Classic 2024 synthetic dataset
 - Generating the country codes lookup table
+I also used LLM to fix smaller issues or to doublecheck code. Some notes in the project where it's been used on "larger" issues. 
 
 All generated data has been reviewed and validated before ingestion.
 
 ---
 
 ## Sources used:
-[Joins with using](https://www.geeksforgeeks.org/sql/sql-using-clause/)\
-[Hashing with xxhash64](https://docs.databricks.com/aws/en/sql/language-manual/functions/xxhash64)
+- [Joins with using](https://www.geeksforgeeks.org/sql/sql-using-clause/)
+- [World Athletics - Ultra Distance Records (for speed filtering validation)](https://worldathletics.org/)
+- [Hashing with xxhash64](https://docs.databricks.com/aws/en/sql/language-manual/functions/xxhash64)
+- [Pyspark basics](https://docs.databricks.com/aws/en/pyspark/basics)
+- [World Athletics - Ultra Distance Records (for speed filtering validation)](https://worldathletics.org/)
