@@ -26,7 +26,7 @@ stockholm_schema = (
               "delta.minWriterVersion": "5"
           })
 def country_codes():
-   return spark.readStream.format("csv").options(header=True, encoding="latin1").schema(country_codes_schema).load(f"{BASE_DIR}/country_codes/")
+   return spark.readStream.format("csv").options(header=True, encoding="UTF-8").schema(country_codes_schema).load(f"{BASE_DIR}/country_codes/")
 
 @dp.table(name="marathos.bronze.stockholm_trail_classic_2024", 
         comment="LMM generated data based on marathos dataset",
@@ -36,5 +36,5 @@ def country_codes():
             "delta.minWriterVersion": "5"
         })
 def stockholm_trail_classic():
-   return spark.readStream.format("csv").options(header=True, encoding="latin1").schema(stockholm_schema).load(f"{BASE_DIR}/stockholm_trail_classic/")
+   return spark.readStream.format("csv").options(header=True, encoding="UTF-8").schema(stockholm_schema).load(f"{BASE_DIR}/stockholm_trail_classic/")
 
